@@ -1,0 +1,56 @@
+---
+- name: Install Jenkins
+  hosts: all
+  become: true
+  tasks:
+    - name: Configure repos for Centos
+      shell: sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+
+    - name: Configure baseurl for Centos
+      shell: sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+       
+    - name: Update yum cache
+      yum: update_cache=yes
+
+    - name: Install fontconfig
+      yum:
+        name: fontconfig
+        state: present
+
+    - name: Add Jenkins APT key
+      rpm_key:
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+        state: present
+
+    - name: Add Jenkins Yum repository
+      yum_repository:
+        name: jenkins
+        description: Jenkins repository
+        baseurl: https://pkg.jenkins.io/redhat-stable/
+        gpgcheck: yes
+        gpgkey: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+        enabled: yes
+
+    - name: Install Java
+      yum:
+        name: java-11-openjdk-headless
+        state: present
+
+    - name: Install Jenkins
+      yum:
+        name: jenkins
+        state: present
+
+    - name: Enable and Start the Jenkins Service
+      service:
+        name: jenkins
+        enabled: yes
+        state: started
+
+    - name: Jenkins initialAdminPassword
+      command: sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: command_output
+
+    - name: Print initialAdminPassword to console
+      debug: 
+        msg : "{{command_output.stdout}}"
